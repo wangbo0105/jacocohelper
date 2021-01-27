@@ -1,0 +1,90 @@
+plugins {
+    id 'com.android.library'
+    id 'maven'
+}
+
+android {
+    compileSdkVersion 30
+    buildToolsVersion "30.0.2"
+
+    defaultConfig {
+        minSdkVersion 16
+        targetSdkVersion 30
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    task makeJar(type: Copy) {
+        group("jar")
+        delete 'build/libs/jacoco-helper.jar'
+        from('build/intermediates/aar_main_jar/release/')
+        into('build/libs/')
+        include('classes.jar')
+        rename('classes.jar', 'jacoco-helper.jar')
+    }
+
+
+    makeJar.dependsOn(build)
+
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    api 'androidx.appcompat:appcompat:1.2.0'
+}
+
+def getRepositoryUsername() {
+    return hasProperty('NEXUS_USERNAME') ? NEXUS_USERNAME : ""
+}
+
+def getRepositoryPassword() {
+    return hasProperty('NEXUS_PASSWORD') ? NEXUS_PASSWORD : ""
+}
+
+uploadArchives {
+    repositories.mavenDeployer {
+        pom.version = '1.0.0'
+        pom.artifactId = 'jacoco-helper'
+        pom.groupId = 'com.mfw.plugin.jacoco'
+        repository(url: "http://10.1.1.235:8071/nexus/content/repositories/app-snapshots/"){
+            authentication(userName: getRepositoryUsername(), password: getRepositoryPassword())
+        }
+        description "jacoco coverage for android"
+    }
+}
+
+task javadoc(type: Javadoc) {
+    failOnError = false
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    options.addStringOption('encoding', 'UTF-8')
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    getArchiveClassifier().convention('javadoc')
+    from javadoc.destinationDir
+}
+
+task sourceJar(type: Jar) {
+    getArchiveClassifier().convention('sources')
+    from android.sourceSets.main.java.srcDirs
+}
+
+artifacts {
+    archives sourceJar
+    archives javadocJar
+}

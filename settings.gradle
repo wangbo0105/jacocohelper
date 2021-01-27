@@ -1,0 +1,3 @@
+include ':jacocohelper'
+include ':app'
+rootProject.name = "jacocohelper"
